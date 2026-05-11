@@ -528,7 +528,30 @@
   .frame-img.swiss-lined{border-top:2px solid var(--accent)}
   .frame-img.swiss-keyline{border:0}
 
-  /* P22 Image Hero: 下半屏内容区必须和图片拉开距离,不要贴在图下沿 */
+  /* P22 Image Hero: 默认安全骨架 = 独立页眉栏 + 全宽图 + 下半屏解释 */
+  .image-hero-chrome{
+    flex:0 0 7.2vh;
+    margin:0;
+    padding:3.4vh 5vw 0;
+    box-sizing:border-box;
+    background:var(--paper);
+    border-bottom:1px solid var(--border-subtle);
+  }
+  .image-hero-strip{
+    position:relative;
+    flex:0 0 56%;
+    overflow:hidden;
+    background:var(--paper);
+  }
+  .image-hero-strip > img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center center;
+    display:block;
+  }
   .image-hero-body{
     display:grid;grid-template-columns:6fr 6fr;gap:3vw;
     padding:6.6vh 5vw 4.4vh;flex:1;align-content:start
@@ -1224,7 +1247,7 @@
      ============================================================ -->
 <!-- SLIDES_HERE · 在此处粘贴 <section class="slide ..."> 页面块
      - 页面骨架直接从 references/layouts-swiss.md 拷贝
-     - data-animate="..." 必须命中下方 RECIPES 字典里的已有 recipe 名之一(P23/P24 可复用 grid-reveal)
+     - data-animate="..." 必须命中下方 RECIPES 字典里的已有 recipe 名之一(实验图文版式可复用 grid-reveal)
      - 主题色配置参考 references/themes-swiss.md (默认 IKB 克莱因蓝) -->
 
 <!-- ============ 示例:第 1 页 · Hero Cover · IKB 满屏 + ASCII 呼吸场(默认推荐) ============
@@ -2193,7 +2216,8 @@ if(motion){
     }
   }
 
-  /* ============ P22 · Image Hero · 图缓推 + 标题白块从左滑入 + 三 KPI 顶线画出 ============ */
+  /* ============ P22 · Image Hero · 图缓推 + 下方说明 + 三 KPI 顶线画出
+     title-block 仅用于 data-s22-overlay-ok="true" 的照片覆盖变体 ============ */
   function rImageHero(slide, all){
     const img = slide.querySelector('[data-anim="img"] img');
     if(img){

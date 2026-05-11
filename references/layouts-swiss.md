@@ -19,7 +19,7 @@
 - 顶部中文标题默认左对齐并处在左上内容轴;不要把标题放到页面中间。
 - 不允许临时发明原始 22P 之外的正文结构。本文档末尾的 P23/P24 属于历史实验区,默认禁用。
 - 需要单张大图时使用 `S22 Image Hero`;需要多图时用 `S15/S16` 的原始矩阵/小报骨架改造成图片格。
-- SVG 只画几何,不写可见文字。标签放 HTML 里。
+- 行内 SVG 只画几何,不写可见文字;外部 SVG/PNG 配图可以有必要短标签,但不能含 deck 级标题、页眉、页码或重复 HTML 标题。
 - 生成完成后运行 `node scripts/validate-swiss-deck.mjs index.html`。
 
 ---
@@ -122,7 +122,7 @@ chrome-min(页眉)、主体内容、底部 footnote 都是 canvas-card 的子元
 底部分页 dot 固定在 `bottom:2vh`,视觉上占据约 `93vh` 之后的区域。主内容、图片 caption、图表说明、timeline label 的最低处必须停在安全区上方。
 
 - 模板提供 `--nav-safe-bottom:8vh`,可用 `.nav-safe-bottom` / `.nav-safe-bottom-tight`
-- P23 使用 `.swiss-img-split.align-image-bottom` 时,模板会自动给底部加安全区,避免图片 caption 被分页组件挡住
+- 实验图文版式使用底部对齐时,必须确认模板给底部加安全区,避免图片 caption 被分页组件挡住
 - 如果为某页手写 `align-items:end` / `margin-top:auto` / `position:absolute;bottom:...`,必须肉眼检查最低处是否越过 nav
 - 视觉自检:打开页面到该页,确认内容最低边缘与分页 dot 之间至少有 `3vh` 呼吸空间
 
@@ -180,7 +180,7 @@ Swiss 主题有 22 个登记版式,生成时要主动展示版式系统,不要�
 2. 截图前先等入场动效稳定(约 1-2 秒)。不要把动画中间态误判成"内容缺失"或"版式空白"。
 3. 先看视觉:标题重量、头部距离、图片落位、底部安全区、caption 是否被 nav 挡住。
 4. 对照原始参考 PPT 的同类版式,不要只对照 CSS helper;以实际页面结构和视觉结果为准。
-5. 再回到代码,检查该页是否误用了不属于该版式的组件,例如把 P24 的三图证据墙塞进 P23,或把 P7 图表用于没有真实数值的概念列表。
+5. 再回到代码,检查该页是否误用了不属于该版式的组件,例如在正式模式混入 P23/P24 实验结构,或把 P7 图表用于没有真实数值的概念列表。
 6. 若视觉不一致,优先判断是**版式选择错**、**必选组件缺失**、**可选组件滥用**还是**间距/安全区问题**,不要直接靠调 `margin` 硬救。
 7. 修改模板时,新增能力必须用新类隔离;不要因为一页出问题去改全局基座类。
 
@@ -668,42 +668,40 @@ Swiss 主题有 22 个登记版式,生成时要主动展示版式系统,不要�
 
 ### P22 · Image Hero · 图文混排封面
 
-**用途**:案例展示、产品图 + 数据落地、章节封面带图。
-**适用内容类型**:**案例展示 / 产品发布 / 章节带图封面**(必须有真实图片资源 + 3 个核心数据)。典型如:产品截图 + 关键指标、案例图 + ROI、用户反馈图 + 复购率。**没有真实图源时禁用**(占位灰图破坏视觉)。
-**骨架**:上半屏 60% 全幅图片 + 左上白底标题块叠加(top:11vh,留出充分缓冲)/ 下半屏 40% 长说明 + 三列 KPI($ / 127× / 100%)。
-**关键类**:`.image-hero` `.hero-img-wrap`(60vh)`.hero-overlay-block` `.hero-stats`
-**动效 recipe**:`image-hero` — 图缓慢 zoom-out(scale 1.05→1)→ 白块 scaleX 0→1 推开 → 三 KPI 顶线依序画出
+**用途**:案例展示、产品图、信息图 + 落地解释、章节封面带图。
+**适用内容类型**:**案例展示 / 产品发布 / 信息图解释 / 章节带图封面**(必须有真实图片资源 + 3 个核心证据点)。如果没有真实量化数据,三列写「入口 / 动作 / 证据」这类证据点,不要编造 KPI。
+**骨架(默认安全变体)**:独立页眉栏 + 上半屏 56% 全幅图片 / 下半屏说明 + 三列证据点。标题和 chrome 不覆盖图片。
+**覆盖变体**:只有照片主视觉且左上有足够负空间时,才允许在 `<section>` 上写 `data-s22-overlay-ok="true"` 并使用白底标题块;信息图、UI 图、SVG 配图禁用覆盖。
+**关键类**:`.image-hero-chrome` `.image-hero-strip` `.image-hero-body` `.image-hero-stats`
+**动效 recipe**:`image-hero` — 图缓慢 zoom-out(scale 1.05→1)→ 下方说明淡入 → 三列顶线依序画出;`title-block` 只作为覆盖变体的可选动效。
 **注意**:
 - 图片优先用 `images/{页号}-{语义}.png` 本地文件(GPT-M 2.0 或用户提供素材),不要默认外链 unsplash
+- 图片内部不要放 deck 级标题、页眉、页脚、页码。信息图只保留图形和必要短标签,页面标题交给 HTML。
+- `chrome-min` 默认独立在图片上方,不要写成 `position:absolute` 压在图片里。validator 会拦截未显式 opt-in 的覆盖写法。
 - 图片下方内容不要贴着图下沿,使用 `.image-hero-body` 统一给下半屏增加顶部缓冲
-- 三列 KPI 大字号要限高(`min(4.6vw, 7.6vh)`),小字用 `margin-top:auto` 锚定列底,防止溢到 nav 圆点
+- 三列证据点/KPI 大字号要限高(`min(4.6vw, 7.6vh)`),小字用 `margin-top:auto` 锚定列底,防止溢到 nav 圆点
 - 列高度统一(grid 不要 `align-items:start`,让列拉伸到同一高度)
 
 **示例代码**:
 ```html
-<section class="slide light" data-animate="image-hero">
+<section class="slide light" data-layout="S22" data-animate="image-hero">
   <div class="canvas-card" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
-    <div data-anim="img" style="position:relative;flex:0 0 60%;overflow:hidden;background:var(--grey-1)">
-      <img src="images/22-product-scene.png" alt="[必填] 图片说明" loading="eager"
-           style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%">
-      <div class="chrome-min" style="position:absolute;top:0;left:0;right:0;color:rgba(255,255,255,.9);padding:5.6vh 5vw 0">
-        <div class="l">Section · Case / Visual Evidence</div>
-        <div class="r">22 / NN</div>
-      </div>
-      <div data-anim="title-block" style="position:absolute;left:5vw;top:11vh;background:var(--paper);padding:3.2vh 3.2vw;max-width:40vw">
-        <div style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(5.2vw,9vh);line-height:1;letter-spacing:-.035em;color:var(--text-primary)">
-          [必填] Image<br>Evidence
-        </div>
-      </div>
+    <header class="chrome-min image-hero-chrome">
+      <div class="l">Section · Case / Visual Evidence</div>
+      <div class="r">22 / NN</div>
+    </header>
+    <div data-anim="img" class="image-hero-strip">
+      <img src="images/22-product-scene.png" alt="[必填] 图片说明" data-image-slot="s22-hero-21x9" loading="eager">
     </div>
     <div data-anim="kpi" class="image-hero-body">
-      <div style="max-width:48ch;font-family:var(--sans),var(--sans-zh);font-size:max(15px,1.3vw);line-height:1.55;font-weight:300;color:var(--text-primary);letter-spacing:-.005em">
-        [必填] 1-2 行解释这张图为什么重要,不要重复标题.
+      <div style="max-width:52ch">
+        <h2 style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(4.2vw,7.4vh);line-height:1;letter-spacing:-.035em;color:var(--text-primary);margin-bottom:1.8vh">[必填] 图像要证明什么</h2>
+        <p style="font-family:var(--sans),var(--sans-zh);font-size:max(15px,1.18vw);line-height:1.55;font-weight:300;color:var(--text-secondary);letter-spacing:-.005em">[必填] 1-2 行解释这张图为什么重要,不要重复图内短标签。</p>
       </div>
       <div class="image-hero-stats" style="gap:4vw">
-        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">Metric 01</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,7.6vh);line-height:.95;letter-spacing:-.04em">12×</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p class="body-sm">[必填] 指标解释</p></div>
-        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">Metric 02</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,7.6vh);line-height:.95;letter-spacing:-.04em">3.4h</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p class="body-sm">[必填] 指标解释</p></div>
-        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">Metric 03</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.6vw,7.6vh);line-height:.95;letter-spacing:-.04em;color:var(--accent)">100%</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p class="body-sm">[必填] 指标解释</p></div>
+        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">入口</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.2vw,7.2vh);line-height:.95;letter-spacing:-.04em">[短词]</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p class="body-sm">[必填] 证据点解释。</p></div>
+        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">动作</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.2vw,7.2vh);line-height:.95;letter-spacing:-.04em">[短词]</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p class="body-sm">[必填] 证据点解释。</p></div>
+        <div style="display:flex;flex-direction:column;gap:.6vh"><div style="height:1px;background:var(--ink)"></div><div class="t-meta">证据</div><div style="font-family:var(--sans);font-weight:200;font-size:min(4.2vw,7.2vh);line-height:.95;letter-spacing:-.04em;color:var(--accent)">[短词]</div><div style="height:1px;background:var(--border-subtle);margin-top:auto"></div><p class="body-sm">[必填] 证据点解释。</p></div>
       </div>
     </div>
   </div>
@@ -825,8 +823,8 @@ Swiss 主题有 22 个登记版式,生成时要主动展示版式系统,不要�
 | 4-6 行账单式 KPI | P20 Stacked Ledger |
 | 产品规格 / benchmark | P21 Tech Spec |
 | 案例图 + 数据落地 | P22 Image Hero |
-| 单图解释论点 / 图文混排 | P23 Swiss Image Split |
-| 2-3 张图片/截图/图表证据链 | P24 Swiss Evidence Grid |
+| 单图解释论点 / 图文混排 | P22 Image Hero 安全变体 |
+| 2-3 张图片/截图/图表证据链 | S15/S16 图片格改造 |
 
 ---
 
@@ -848,8 +846,8 @@ Swiss 主题有 22 个登记版式,生成时要主动展示版式系统,不要�
 | 多步骤流程(无数据) | P11 Horizontal Timeline | |
 | 8-12 项同类 | P15 Image Matrix | |
 | deck 收尾 | P9 Closing(每 deck 仅 1 次) | |
-| 1 张核心图片 + 一段解释 | P23 Swiss Image Split | P22(除非图片是主角且有 KPI) |
-| 2-3 张同类图片 | P24 Evidence Grid | P4/P16(文字卡片,不是图片证据) |
+| 1 张核心图片 + 一段解释 | P22 Image Hero 安全变体 | 默认禁用 P23,除非实验模式 |
+| 2-3 张同类图片 | S15/S16 图片格改造 | P4/P16 纯文字卡片不能直接替代图片证据 |
 
 **雷区案例**:用 P7 H-Bar Chart 展示「智能补全 / 实时协作 / 自主代理」这种**无可比百分比的概念列举**,编造 96/88/78 之类数字 → **数据不可信,版式滥用**。这种内容应该用 P2(若有时间维度)或 P3 Statement(若是论断)。
 

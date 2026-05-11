@@ -120,6 +120,7 @@ Generated images must follow three core rules:
 - Treat the image as an embedded asset, not a standalone slide: no footer, page bottom, title, page number, corner mark, signature, or decorative border
 - Match the deck language: Chinese decks use Chinese labels inside infographics, English decks use English labels
 - Match the slot ratio before generation: 21:9 for many Swiss hero slots, 16:9 / 16:10 for common main visuals, 16:10 for UI scenes, fixed equal heights for image grids
+- For Swiss S22 infographic pages, use a separate header bar by default; do not overlay slide chrome or title blocks on the image unless a photo hero is explicitly approved.
 
 Image prompts live in [`references/image-prompts.md`](./references/image-prompts.md).
 

@@ -122,6 +122,7 @@ node scripts/validate-swiss-deck.mjs path/to/index.html
 - 图片是 PPT 中的嵌入素材,不要自带页脚、页底、标题、角标、页码或装饰边框
 - 图片语言跟随 deck 语言:中文 deck 的信息图用中文标签,英文 deck 用英文标签
 - 图片比例必须先匹配落位:瑞士风主图常用 21:9,通用主图常用 16:9 / 16:10,截图再设计常用 16:10,多图网格统一高度
+- 瑞士风 S22 信息图默认用独立页眉栏,不要把 PPT 页眉或标题块覆盖在图片上;照片主视觉需要覆盖时必须显式确认
 
 配图提示词见 [`references/image-prompts.md`](./references/image-prompts.md)。
 

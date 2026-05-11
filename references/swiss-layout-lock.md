@@ -15,7 +15,7 @@
 1. 每个正文页都必须先选一个登记版式,并在 `<section>` 上写 `data-layout="Sxx"`。
 2. 不允许临时发明 `P23/P24` 这类未出现在原始 22P 的正文结构。需要图片时,优先使用 `S22 Image Hero`;多图时使用 `S15/S16` 的原始网格骨架做图片格改造,不要发明新的证据墙。
 3. 顶部中文标题默认左对齐并贴近左上内容轴。除原始 `S03/S09/S10` 这种 statement/split 版式外,不要把大标题放到页面水平中心。
-4. SVG 只能负责几何线条、圆、箭头、路径。不要在 SVG 里写可见文字;所有文字标签用 HTML 放在网格、卡片或 caption 里。
+4. 行内 SVG 只能负责几何线条、圆、箭头、路径。外部 SVG/PNG 作为配图时可以有必要短标签,但不能包含 deck 级标题、页眉、页脚、页码或与 HTML 标题重复的文案。
 5. 图片槽位和图片生成比例必须绑定。先确定版式和槽位,再生成图片。
 
 ## 登记版式
@@ -43,18 +43,19 @@
 | S19 | 19 | Four Cards | 顶部蓝线 + 四列均分 | 无 |
 | S20 | 20 | Stacked KPI Ledger | 纵向账单式巨数 | 无 |
 | S21 | 21 | Tech Spec Sheet | 大标题 + 三 KPI + 右下竖线矩阵 | 无 |
-| S22 | 22 | Image Hero | 顶部全宽图 + 左上白块标题 + 下方三列 KPI | 主图按 `21:9` 生成,关键主体放中央安全区 |
+| S22 | 22 | Image Hero | 独立页眉栏 + 顶部全宽图 + 下方说明/三列证据点 | 主图按 `21:9` 生成,关键主体放中央安全区;标题默认不覆盖图片 |
 
 ## 图片槽位规则
 
 ### S22 · Hero Strip
 
 - 生成比例: `21:9`
-- 图片用途:实拍场景、产品场景、UI 情景图。
+- 图片用途:案例图、产品场景、UI 情景图、信息图。
 - 生成提示词必须包含: `21:9 ultra-wide strip`, `subject centered in the safe middle area`, `no title, no footer, no page chrome, no logo, no border`.
-- HTML 容器必须使用原始 S22 的顶部全宽图骨架;不要改成普通居中大图。
+- HTML 容器必须使用 S22 的顶部全宽图骨架;不要改成普通居中大图。
+- 默认用独立页眉栏,不要把 `chrome-min` 或白底标题块压在图片上。只有照片有足够安全留白时,才允许在 `<section>` 上显式写 `data-s22-overlay-ok="true"` 作为人工确认。
 - 照片用 `object-fit:cover;object-position:center 35%`。如果是人像/会议场景,不要用 `top center`。
-- 信息图/UI 截图如果放 S22,必须重新生成接近 `21:9`,并用 `object-fit:contain` 或保证核心内容在中央 70% 安全区。
+- 信息图/UI 截图如果放 S22,必须重新生成接近 `21:9`,核心内容放中央 70% 安全区。图片内部只保留图形和必要短标签,不要再生成左上大标题或页眉。
 
 ### S15/S16 · Multi Image Grid
 
@@ -71,5 +72,6 @@
 - 禁止将顶部标题写进右侧 7.8fr 栏,造成视觉居中。
 - 禁止未登记正文页:例如临时 `Swiss Image Split`、`Evidence Grid`、三圆图自绘页。
 - 禁止图片容器灰底包白底信息图。
-- 禁止 SVG 中出现 `<text>` 作为可见标签。
+- 禁止行内 SVG 中出现 `<text>` 作为可见标签;外部 SVG 配图禁止出现 deck 级标题、页眉、页脚、页码或重复 HTML 标题。
 - 禁止图片默认 `object-position:top center` 用于照片。
+- 禁止 S22 默认把 `chrome-min` / `title-block` 覆盖在图片上;照片型页面需要显式 `data-s22-overlay-ok="true"`。

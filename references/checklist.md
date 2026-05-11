@@ -28,7 +28,9 @@ node <SKILL_ROOT>/scripts/validate-swiss-deck.mjs path/to/index.html
 - 未登记版式 / 缺少 `data-layout`
 - P23/P24 实验结构
 - SVG 里写可见文字
+- 本地 SVG 配图重复页面标题 / 页眉 / 页码
 - S22 图片未绑定 `s22-hero-21x9`
+- S22 默认把 `chrome-min` 或 `title-block` 压在图片上
 - S22 照片使用 `object-position:top center`
 
 ### 0-S-2. Swiss 顶部标题默认左上,不是居中
@@ -153,7 +155,7 @@ node <SKILL_ROOT>/scripts/validate-swiss-deck.mjs path/to/index.html
 
 **做法**:
 - 主内容最低边缘与分页组件之间至少留 `3vh` 呼吸空间
-- P23 需要底部对齐时用 `.swiss-img-split.align-image-bottom`,模板已内置 `--nav-safe-bottom:8vh`
+- 实验图文版式需要底部对齐时,必须确认模板已内置 `--nav-safe-bottom:8vh`;默认正式生成优先用 S22/S15/S16
 - 其他页面需要贴底时,给主体容器加 `.nav-safe-bottom` 或 `.nav-safe-bottom-tight`
 - 不要手写 `bottom:2vh` / `bottom:0` 放说明文字;这会和 nav 抢位置
 
@@ -428,13 +430,20 @@ Dark hero 可以用 Holographic Dispersion（钛金色散）等带中心结构�
 - GPT-M 2.0 生成的配图只是嵌入素材,不要让图片自带页眉、页脚、标题、页码、角标、署名或装饰边框
 - 流程图/信息图只保留核心图形和必要短标签,PPT 自己负责标题、页脚和 chrome
 - 如果生成图已经带了这些元素,优先重生成;不要在 PPT 里再叠一层 chrome 造成干扰
+- 外部 SVG/PNG 配图允许有必要短标签,但不能有 deck 级标题、页眉、页码,也不能重复 HTML 里的页标题
 
 ### 13e. Swiss 图文混排不能只用一种
 
 - 7-8 页 Swiss 测试 deck 至少使用 6 个不同 P 编号版式
-- 有 2-3 张配图时,至少使用两种图片承载方式:P22 主视觉 / P23 单图解释 / P24 证据墙 / P15 矩阵 / P16 小报
-- P23 默认底对齐:文字块和图片底部对齐,不要因为担心 nav 就退回顶部对齐;先控制图片高度
+- 有 2-3 张配图时,至少使用两种图片承载方式:S22 主视觉 / S15 矩阵 / S16 小报;P23/P24 只在显式实验模式使用
+- S22 默认使用独立页眉栏 + 顶部图,不要把 chrome 或标题块覆盖在信息图上
 - 白底信息图容器必须白底、无描边;不要用灰框包白图
+
+### 13e-2. S22 覆盖标题必须显式 opt-in
+
+- 信息图、UI 图、SVG 图默认不能叠 `chrome-min` 或白底标题块,否则会和图内短标签抢层级
+- 只有照片主视觉且左上负空间充足时,才允许在 `<section>` 上写 `data-s22-overlay-ok="true"`
+- 如果覆盖变体里出现图内标题、页码、页眉或与 HTML 标题重复的文字,必须重生成图片或改回安全变体
 
 ### 13f. Swiss 中文大标题要降级
 
@@ -489,6 +498,8 @@ JS 会动态算总页数并扩展底部翻页圆点，但 `.chrome` 里的 `XX /
   □ 没有使用 emoji 作图标
   □ Skills / Harness 等术语用法统一
   □ 每页的 kicker + 标题 + 正文 三级信息清晰
+  □ 技术/方法论页都有「一句主张 / 一个例子或证据 / 一句可讲的话」
+  □ 中文逐页朗读自然,没有生造词、机器翻译腔或中英混用不明
 
 排版
   □ 所有大标题没有出现 1 字 1 行的换行
@@ -500,8 +511,10 @@ JS 会动态算总页数并扩展底部翻页圆点，但 `.chrome` 里的 `XX /
 视觉
   □ hero 页和 non-hero 页交替
   □ WebGL 背景在 hero 页可见
-  □ 图片有微弱圆角
+  □ 风格 A 图片可有微弱圆角;风格 B Swiss 图片必须直角
   □ 没有沉重的阴影和边框
+  □ S22 信息图页的页眉和标题没有覆盖图片
+  □ 本地 SVG/PNG 配图没有自带页眉、页码或重复页面标题
 
 交互
   □ ← → 翻页正常

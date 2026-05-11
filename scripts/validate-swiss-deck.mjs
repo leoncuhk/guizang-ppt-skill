@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, extname, join } from 'node:path';
 
 const file = process.argv[2];
 const allowExperimental = process.argv.includes('--allow-experimental');
@@ -10,9 +11,95 @@ if (!file) {
 }
 
 const html = readFileSync(file, 'utf8');
+const deckDir = dirname(file);
 const htmlForSlides = html.replace(/<!--[\s\S]*?-->/g, '');
 const errors = [];
 const warnings = [];
+
+function getAttr(tag, name) {
+  return tag.match(new RegExp(`\\b${name}="([^"]*)"`, 'i'))?.[1] ?? '';
+}
+
+function decodeEntities(text) {
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function stripTags(html) {
+  return decodeEntities(html.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeText(text) {
+  return stripTags(text)
+    .toLowerCase()
+    .replace(/[`"'“”‘’·.,，。:：;；!?！？/\\|()[\]{}<>《》\s_-]+/g, '')
+    .trim();
+}
+
+function isLikelyDuplicate(a, b) {
+  if (!a || !b || Math.min(a.length, b.length) < 6) return false;
+  if (a === b) return true;
+  if (Math.min(a.length, b.length) >= 8 && (a.includes(b) || b.includes(a))) return true;
+  return false;
+}
+
+function extractSlideLabels(slideHtml) {
+  const labels = [];
+  const labelRe = /<(?:h1|h2)\b[^>]*>([\s\S]*?)<\/(?:h1|h2)>|<div\b[^>]*class="[^"]*\b(?:l|r)\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+  for (const match of slideHtml.matchAll(labelRe)) {
+    const text = stripTags(match[1] ?? match[2] ?? '');
+    if (text) labels.push(text);
+  }
+  return labels;
+}
+
+function parseTranslate(tag) {
+  const transform = getAttr(tag, 'transform');
+  const match = transform.match(/translate\(\s*(-?\d+(?:\.\d+)?)(?:[,\s]+(-?\d+(?:\.\d+)?))?/i);
+  if (!match) return { x: 0, y: 0 };
+  return { x: Number(match[1] ?? 0), y: Number(match[2] ?? 0) };
+}
+
+function extractSvgTexts(svg) {
+  const texts = [];
+  const stack = [{ x: 0, y: 0 }];
+  const tokenRe = /<g\b[^>]*>|<\/g>|<text\b[^>]*>[\s\S]*?<\/text>/gi;
+  for (const token of svg.matchAll(tokenRe)) {
+    const raw = token[0];
+    if (/^<g\b/i.test(raw)) {
+      const parent = stack[stack.length - 1];
+      const translate = parseTranslate(raw);
+      stack.push({ x: parent.x + translate.x, y: parent.y + translate.y });
+      continue;
+    }
+    if (/^<\/g/i.test(raw)) {
+      if (stack.length > 1) stack.pop();
+      continue;
+    }
+    const tag = raw.match(/^<text\b[^>]*>/i)?.[0] ?? '';
+    const parent = stack[stack.length - 1];
+    const x = Number(getAttr(tag, 'x') || 0) + parent.x;
+    const y = Number(getAttr(tag, 'y') || 0) + parent.y;
+    const fontSize = Number(getAttr(tag, 'font-size') || 0);
+    const text = stripTags(raw);
+    if (text) texts.push({ text, x, y, fontSize });
+  }
+  return texts;
+}
+
+function resolveLocalImage(src) {
+  const clean = src.split(/[?#]/)[0];
+  try {
+    return join(deckDir, decodeURIComponent(clean));
+  } catch {
+    return join(deckDir, clean);
+  }
+}
 
 const allowedLayouts = new Set([
   'SWISS-COVER-ASCII',
@@ -59,11 +146,32 @@ slides.forEach((slide) => {
     errors.push(`Slide ${slide.idx}: SVG contains visible <text>. Put labels in HTML grid/captions, keep SVG for geometry only.`);
   }
 
-  const localImages = [...slide.html.matchAll(/<img\b[^>]*src="images\//g)];
-  localImages.forEach((_, imageIndex) => {
-    const imgTag = slide.html.slice(_.index, slide.html.indexOf('>', _.index) + 1);
+  const localImages = [...slide.html.matchAll(/<img\b[^>]*src="(images\/[^"]+)"/g)];
+  const slideLabels = extractSlideLabels(slide.html).map(normalizeText).filter((text) => text.length >= 6);
+  localImages.forEach((match, imageIndex) => {
+    const imgTag = slide.html.slice(match.index, slide.html.indexOf('>', match.index) + 1);
     if (!/\bdata-image-slot="/.test(imgTag)) {
       errors.push(`Slide ${slide.idx}: local image ${imageIndex + 1} missing data-image-slot. Bind every image to a layout slot such as s22-hero-21x9 or s15-grid-21x9.`);
+    }
+    const imagePath = resolveLocalImage(match[1]);
+    if (!existsSync(imagePath)) {
+      errors.push(`Slide ${slide.idx}: local image ${imageIndex + 1} not found: ${match[1]}.`);
+      return;
+    }
+    if (extname(imagePath).toLowerCase() === '.svg') {
+      const svg = readFileSync(imagePath, 'utf8');
+      for (const svgText of extractSvgTexts(svg)) {
+        const normalizedSvgText = normalizeText(svgText.text);
+        if (/^\d{1,2}\s*\/\s*\d{1,2}$/.test(svgText.text)) {
+          errors.push(`Slide ${slide.idx}: SVG image ${imageIndex + 1} contains a page-number-like label "${svgText.text}". Images must not include page chrome.`);
+        }
+        if (slideLabels.some((label) => isLikelyDuplicate(normalizedSvgText, label))) {
+          errors.push(`Slide ${slide.idx}: SVG image ${imageIndex + 1} repeats a page-level title/chrome label "${svgText.text}". Put deck titles in HTML, not inside the image.`);
+        }
+        if (layout === 'S22' && svgText.x < 620 && svgText.y < 220 && svgText.fontSize >= 52) {
+          warnings.push(`Slide ${slide.idx}: SVG image ${imageIndex + 1} has a large top-left text label "${svgText.text}". Confirm it is diagram content, not a duplicated slide title.`);
+        }
+      }
     }
   });
 
@@ -89,6 +197,13 @@ slides.forEach((slide) => {
   if (layout === 'S22') {
     if (!/data-image-slot="s22-hero-21x9"/.test(slide.html)) {
       errors.push(`Slide ${slide.idx}: S22 must use data-image-slot="s22-hero-21x9".`);
+    }
+    const overlayOptIn = /\bdata-s22-overlay-ok="true"/.test(slide.tag);
+    if (!overlayOptIn && /class="[^"]*\bchrome-min\b[^"]*"[^>]*style="[^"]*position\s*:\s*absolute/i.test(slide.html)) {
+      errors.push(`Slide ${slide.idx}: S22 places chrome-min over the image. Use an independent header bar, or opt in deliberately with data-s22-overlay-ok="true" for photo-only hero pages.`);
+    }
+    if (!overlayOptIn && /\bdata-anim="title-block"|\bhero-overlay-block\b/.test(slide.html)) {
+      errors.push(`Slide ${slide.idx}: S22 uses an image overlay title block. Default S22 should keep titles outside the image; use data-s22-overlay-ok="true" only when the image is a photo with safe negative space.`);
     }
     if (/object-position\s*:\s*top center/i.test(slide.html)) {
       errors.push(`Slide ${slide.idx}: S22 photo uses object-position:top center, which commonly crops faces. Use center 35% or center center.`);
